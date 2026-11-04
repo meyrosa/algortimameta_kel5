@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Metaheuristik Interaktif — Harmony Search & Clonal Selection</title>
+<script>(function(){var t;try{t=localStorage.getItem('theme')}catch(e){}if(!t)t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.dataset.theme=t})()</script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="sp"></div>
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">Kelompok 5 · Metaheuristic optimization</div>
+      <h1>Mencari solusi terbaik<br><span class="gradient">tanpa harus mencoba semua pilihan</span></h1>
+      <p>Dikembangkan oleh kelompok 5:</p>
+      <ul class="authors">
+        <li>Diva Aulia Rosa/5027241003</li>
+        <li>Mey Rosalina/5027241004</li>
+        <li>Naila Cahyarani Idelia/5027241063</li>
+        <li>Fika Arka Nuriah/5027241071</li>
+      </ul>
+      <div class="chips">
+        <span class="chip">🎼 Harmony Search</span>
+        <span class="chip">🧬 Clonal Selection</span>
+        <span class="chip">☁️ Task scheduling</span>
+        <span class="chip">▶ Demo interaktif</span>
+      </div>
+      <a href="#simulasi"><button class="primary">Mulai simulasi ↓</button></a>
+    </div>
+    <div class="orb" aria-label="Animasi ilustrasi pencarian solusi">
+      <div class="ring"></div>
+      <div class="core">✦</div>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <div class="wrap">
+    <a href="#dasar">Konsep</a>
+    <a href="#hs">Harmony Search</a>
+    <a href="#csa">Clonal Selection</a>
+    <a href="#simulasi">Simulasi</a>
+    <a href="#kasus">Studi kasus</a>
+    <a href="#banding">Perbandingan</a>
+    <a href="#referensi">Referensi</a>
+    <button class="theme-btn" id="themeBtn" aria-label="Ganti tema gelap/terang">☀️ Terang</button>
+  </div>
+</nav>
+
+<main class="wrap">
+
+<section id="dasar">
+  <div class="section-head">
+    <div>
+      <div class="kicker">01 · Fondasi</div>
+      <h2>Apa itu metaheuristik?</h2>
+    </div>
+    <p>Strategi pencarian untuk menemukan solusi yang bagus pada masalah optimasi yang punya banyak kemungkinan dimana ketika mencoba semua kemungkinan satu per satu terlalu mahal.</p>
+  </div>
+  <div class="grid three">
+    <div class="card">
+      <div class="iconbox">🧭</div>
+      <h3>Ruang solusi</h3>
+      <p>Semua kandidat jawaban yang mungkin. Pada scheduling, satu kandidat bisa berarti pembagian setiap task ke mesin virtual (VM).</p>
+    </div>
+    <div class="card">
+      <div class="iconbox">📏</div>
+      <h3>Fungsi objektif</h3>
+      <p>Alat ukur atau rumus untuk menilai seberapa bagus suatu kandidat solusi. Contohnya makespan, yaitu total waktu yang dibutuhkan hingga semua VM selesai bekerja. Semakin kecil nilainya, semakin bagus solusinya.</p>
+    </div>
+    <div class="card">
+      <div class="iconbox">🔁</div>
+      <h3>Eksplorasi & eksploitasi</h3>
+      <p>Eksplorasi bertugas mencari alternatif di area solusi yang baru, sedangkan eksploitasi fokus menyempurnakan kandidat solusi yang sudah terbukti bagus. Keduanya harus berjalan seimbang.</p>
+    </div>
+  </div>
+  <div class="callout" style="margin-top:16px">
+    <b>Ringkasan:</b> Metaheuristik tidak menjamin hasil yang sempurna (optimal global), melainkan berfokus mencari solusi terbaik dalam waktu dan biaya yang masuk akal.
+  </div>
+</section>
+
+<section id="hs">
+  <div class="section-head">
+    <div>
+      <div class="kicker">02 · Algoritma pertama</div>
+      <h2>🎼 Harmony Search (HS)</h2>
+    </div>
+    <p>Terinspirasi dari proses seorang musisi dalam bereksperimen dengan berbagai kombinasi nada untuk menciptakan harmoni musik yang paling indah.</p>
+  </div>
+  <div class="grid two">
+    <div class="card">
+      <span class="tag">Intuisi</span>
+      <h3>Harmony Memory = kumpulan solusi</h3>
+      <p>Bayangkan musisi menyimpan beberapa kombinasi nada yang pernah dicoba. Saat membuat harmoni baru, ia bisa memakai nada dari ingatan, sedikit mengubahnya, atau mencoba nada baru.</p>
+      <div class="flow">
+        <span>🎹 Harmony Memory</span><i>→</i>
+        <span>Improvisasi</span><i>→</i>
+        <span>Evaluasi</span>
+      </div>
+      <p class="small">Dalam kasus penjadwalan (scheduling), komponen "nada" dianalogikan sebagai keputusan penempatan suatu tugas (task) pada mesin virtual (VM) tertentu.</p>
+    </div>
+    <div class="card">
+      <span class="tag">Parameter utama</span>
+      <h3>Pengendali pencarian</h3>
+      <ul>
+        <li><b>HMS (Harmony Memory Size)</b> → Jumlah atau kapasitas maksimal kandidat solusi yang disimpan di dalam memori.</li>
+        <li><b>HMCR (Harmony Memory Considering Rate)</b> → Peluang untuk memilih atau mengambil nilai dari solusi yang sudah tersimpan di memori (bukan membuat dari nol).</li>
+        <li><b>PAR (Pitch Adjusting Rate)</b> → Peluang untuk melakukan sedikit perubahan/penyesuaian nilai (pitch adjustment) pada nada yang telah dipilih.</li>
+        <li><b>Iterasi</b> → Batas maksimal berapa kali proses improvisasi atau pencarian kandidat baru dilakukan.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 style="margin-top:28px">Alur kerja HS (klik langkah untuk fokus)</h3>
+  <div class="card">
+    <div class="steps" id="hsSteps" style="--c:var(--hs)"></div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h3>Coba improvisasi sendiri</h3>
+    <p class="muted small">Satu harmoni = 8 task. Tiap “nada” ditentukan oleh tiga kemungkinan:
+      <span class="pill M">M</span> (Memory): Ambil dari memori
+      <span class="pill A">A</span> (Adjust): Pergeseran nilai nada
+      <span class="pill R">R</span> (Random): Pemilihan acak.
+    </p>
+    <div class="ctrl">
+      <label>HMCR <b id="hv1">0.9</b>
+        <input type="range" id="hmcr" min="0" max="1" step=".05" value=".9" style="width:140px;accent-color:var(--hs)">
+      </label>
+      <label>PAR <b id="hv2">0.3</b>
+        <input type="range" id="par" min="0" max="1" step=".05" value=".3" style="width:140px;accent-color:var(--hs)">
+      </label>
+      <button class="primary" style="background:linear-gradient(120deg,#e8590c,#c2410c)" onclick="improv()">🎵 Improvisasi!</button>
+    </div>
+    <div class="mini-chips" id="hsChips"></div>
+    <div class="log" id="hsLog" style="height:auto;min-height:40px">Klik "Improvisasi!" untuk membuat harmoni baru. Angka yang muncul menunjukkan nomor VM (0, 1, atau 2).</div>
+  </div>
+
+  <div class="callout" style="margin-top:16px">
+    Ringkasnya: <b>Cara Kerja HS: Mengingat solusi bagus → Membuat variasi baru → Mempertahankan yang terbaik.</b> Fungsi HMCR & PAR: Mengatur keseimbangan antara memakai solusi lama atau mengeksplorasi variasi baru.
+  </div>
+</section>
+
+<section id="csa">
+  <div class="section-head">
+    <div>
+      <div class="kicker">03 · Algoritma kedua</div>
+      <h2>🧬 Clonal Selection Algorithm (CSA)</h2>
+    </div>
+    <p>Terinspirasi dari sistem imun adaptif: kloning dan mutasi antibodi terbaik untuk menciptakan respons kekebalan yang optimal.</p>
+  </div>
+  <div class="grid two">
+    <div class="card">
+      <span class="tag">Intuisi</span>
+      <h3>Kandidat bagus diperbanyak</h3>
+      <p>Setiap kandidat solusi diibaratkan sebagai antibodi. Kualitasnya dinilai melalui <i>affinity</i> (Nilai Kualitas) seberapa baik kandidat menyelesaikan masalah. Kandidat berkualitas tinggi mendapat kesempatan kloning lebih besar.</p>
+      <div class="flow">
+        <span>🧫 Populasi</span><i>→</i>
+        <span>🧬 Kloning</span><i>→</i>
+        <span>✨ Mutasi</span><i>→</i>
+        <span>🏆 Seleksi</span>
+      </div>
+    </div>
+    <div class="card">
+      <span class="tag">Istilah utama</span>
+      <h3>Bahasa CSA</h3>
+      <ul>
+        <li><b>Antibodi</b> → representasi satu kandidat solusi.</li>
+        <li><b>Affinity</b> → ukuran kecocokan atau kualitas solusi terhadap masalah.</li>
+        <li><b>Kloning</b> → Proses menggandakan kandidat solusi terpilih.</li>
+        <li><b>Hypermutation</b> → Proses memutasi kandidat (solusi terbaik diberi mutasi kecil agar tidak rusak, solusi buruk diberi mutasi besar).</li>
+        <li><b>Seleksi</b> → Memilih kandidat terbaik untuk menjaga kualitas dan keragaman populasi.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 style="margin-top:28px">Alur kerja CSA (klik langkah untuk fokus)</h3>
+  <div class="card">
+    <div class="steps" id="csSteps" style="--c:var(--cs)"></div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h3>Simulasi satu generasi imun</h3>
+    <p class="muted small">Tinggi batang menunjukkan nilai afinitas (semakin tinggi, semakin berkualitas solusi tersebut). Antibodi bagus dikloning dengan mutasi <b>kecil</b>, yang lemah bermutasi <b>besar</b>.</p>
+    <div class="ctrl">
+      <button class="primary" style="background:linear-gradient(120deg,#1c7ed6,#1864ab)" onclick="csaGen()">🧬 Jalankan 1 generasi</button>
+      <button onclick="csaInit()">Reset</button>
+    </div>
+    <div class="bars" id="bars"></div>
+    <div class="log" id="csLog" style="height:auto;min-height:40px"></div>
+  </div>
+
+  <div class="callout" style="margin-top:16px">
+    <li><b>Inti Cara Kerja CSA:</b> Menggandakan antibodi berkualitas → Menguji variasi baru lewat mutasi → Menyeleksi antibodi terbaik untuk generasi berikutnya.
+    <li><b>Catatan Teknis:</b> Mekanisme detail mengenai kloning, mutasi, dan pembaruan populasi dapat bervariasi tergantung jenis varian CSA yang digunakan.
+  </div>
+</section>
+
+<section id="simulasi">
+  <div class="section-head">
+    <div>
+      <div class="kicker">04 · Coba sendiri</div>
+      <h2>Laboratorium scheduling interaktif</h2>
+    </div>
+    <p>Uji kedua pendekatan pada masalah mini yang sama. Klik jalankan untuk melihat kandidat pembagian task, makespan, dan riwayat pencarian.</p>
+  </div>
+  <div class="card">
+    <div class="tabs">
+      <button class="active" data-tab="simhs">🎼 Demo HS</button>
+      <button data-tab="simcsa">🧬 Demo CSA</button>
+    </div>
+    <div class="demo-layout">
+      <div class="card controls" style="background:#10182b">
+        <h3 id="demoTitle">Atur eksperimen HS</h3>
+        <p class="small muted" id="demoDesc">HS membentuk kandidat dari memori solusi dan mencoba improvisasi.</p>
+        <label for="iters">Jumlah iterasi <span class="value" id="itersVal">80</span></label>
+        <input id="iters" type="range" min="10" max="200" step="10" value="80">
+        <label for="tasks">Jumlah task <span class="value" id="tasksVal">5</span></label>
+        <input id="tasks" type="range" min="3" max="8" step="1" value="5">
+        <label for="vms">Jumlah VM</label>
+        <select id="vms">
+          <option value="2">2 VM</option>
+          <option value="3" selected>3 VM</option>
+          <option value="4">4 VM</option>
+        </select>
+        <label for="speed">Kecepatan animasi</label>
+        <select id="speed">
+          <option value="fast">Cepat</option>
+          <option value="normal" selected>Normal</option>
+          <option value="slow">Pelan</option>
+        </select>
+        <div class="progress"><span id="progress"></span></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="primary" id="run">▶ Jalankan algoritma</button>
+          <button id="next">Langkah berikutnya</button>
+          <button id="reset">Reset</button>
+        </div>
+        <p class="small muted">Catatan: demo memakai data ilustratif dan prosedur pencarian ringkas untuk membantu memahami konsep, bukan benchmark penelitian.</p>
+      </div>
+      <div>
+        <div class="metricrow">
+          <div class="metric"><span>Iterasi</span><b id="metricIter">0</b></div>
+          <div class="metric"><span>Best makespan</span><b id="metricBest">—</b></div>
+          <div class="metric"><span>Evaluasi</span><b id="metricEval">0</b></div>
+        </div>
+        <h3>Jadwal kandidat terbaik</h3>
+        <div class="schedule" id="schedule"></div>
+        <div class="legend" id="legend"></div>
+        <div class="log" id="log" aria-live="polite">Siap. Tekan “Jalankan algoritma” atau “Langkah berikutnya” untuk mulai.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="kasus">
+  <div class="section-head">
+    <div>
+      <div class="kicker">05 · Dari masalah ke solusi</div>
+      <h2>Studi kasus: task scheduling di cloud</h2>
+    </div>
+    <p>Contoh sederhana untuk menjelaskan bagaimana algoritma mengubah masalah nyata menjadi kandidat solusi yang bisa dihitung dan dibandingkan.</p>
+  </div>
+
+  <div class="grid two">
+    <div class="card">
+      <span class="tag">Tahap 1 · Task</span>
+      <h3>Masalah yang ingin diselesaikan</h3>
+      <p>Sebuah aplikasi memiliki lima task yang harus dijalankan pada tiga VM. Setiap task membutuhkan waktu eksekusi berbeda pada setiap VM. Tujuannya adalah membagi task agar semua pekerjaan selesai secepat mungkin.</p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Task</th><th>VM 1</th><th>VM 2</th><th>VM 3</th></tr></thead>
+          <tbody>
+            <tr><td>T1</td><td>4</td><td>6</td><td>5</td></tr>
+            <tr><td>T2</td><td>7</td><td>3</td><td>4</td></tr>
+            <tr><td>T3</td><td>5</td><td>4</td><td>6</td></tr>
+            <tr><td>T4</td><td>6</td><td>5</td><td>3</td></tr>
+            <tr><td>T5</td><td>3</td><td>7</td><td>4</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small muted">Angka adalah unit waktu ilustratif. Asumsi: task independen, VM menjalankan satu task pada satu waktu, dan tidak dihitung overhead komunikasi.</p>
+    </div>
+    <div class="card">
+      <span class="tag">Tahap 2 · Formulasi</span>
+      <h3>Bagaimana solusi direpresentasikan?</h3>
+      <p>Satu kandidat adalah daftar VM tujuan untuk setiap task. Contoh <code>[1, 2, 3, 3, 1]</code> berarti T1→VM1, T2→VM2, T3→VM3, T4→VM3, T5→VM1.</p>
+      <div class="callout"><b>Fungsi objektif:</b><br>Makespan = nilai maksimum dari total waktu eksekusi pada setiap VM.</div>
+      <p>Jika total beban VM adalah 7, 3, dan 9 unit, maka makespan = max(7, 3, 9) = <b>9 unit waktu</b>. Target optimasi: minimalkan makespan.</p>
+      <h3>Aturan validitas</h3>
+      <ul>
+        <li>Setiap task harus ditugaskan tepat ke satu VM.</li>
+        <li>Waktu task mengikuti kolom VM yang dipilih.</li>
+        <li>Bandingkan kandidat dengan rumus objektif yang sama.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <span class="tag">Tahap 3 · Jalankan algoritma + kurva konvergensi</span>
+    <h3>HS vs CSA pada instance yang lebih besar</h3>
+    <p class="muted">Atur jumlah task dan iterasi, lalu jalankan keduanya bersamaan. Kurva menunjukkan makespan terbaik seiring iterasi (semakin rendah semakin bagus). Pembanding: Round Robin.</p>
+    <div class="ctrl">
+      <label>Jumlah task <b id="tv">20</b>
+        <input type="range" id="nt" min="8" max="40" value="20" style="width:140px;accent-color:var(--cyan)">
+      </label>
+      <label>Iterasi <b id="iv">150</b>
+        <input type="range" id="ni" min="50" max="400" step="10" value="150" style="width:140px;accent-color:var(--cyan)">
+      </label>
+      <button class="primary" id="runBtn" onclick="runCase()">▶ Jalankan HS & CSA</button>
+      <button onclick="newCase()">🎲 Acak kasus baru</button>
+    </div>
+    <div id="taskList" class="mini-chips"></div>
+    <p class="muted small" id="vmInfo"></p>
+    <h3 style="margin-top:18px">Kurva konvergensi (makespan)</h3>
+    <canvas id="cv" width="900" height="240"></canvas>
+    <div class="stats">
+      <div class="stat"><span class="muted">Round Robin</span><b id="stRR">–</b></div>
+      <div class="stat"><span class="hs-c">HS terbaik</span><b id="stHS" class="hs-c">–</b></div>
+      <div class="stat"><span class="cs-c">CSA terbaik</span><b id="stCS" class="cs-c">–</b></div>
+      <div class="stat"><span class="muted">Iterasi</span><b id="stIt">0</b></div>
+    </div>
+    <p id="verdict" class="muted" style="margin-top:8px"></p>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <span class="tag">Tahap 4 · Evaluasi solusi (contoh manual)</span>
+    <h3>Contoh pembagian yang baik</h3>
+    <p>Salah satu jadwal yang dapat diuji pada instance 5-task:</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>VM</th><th>Task</th><th>Total waktu</th></tr></thead>
+        <tbody>
+          <tr><td>VM 1</td><td>T1 (4) + T5 (3)</td><td>7</td></tr>
+          <tr><td>VM 2</td><td>T2 (3) + T3 (4)</td><td>7</td></tr>
+          <tr><td>VM 3</td><td>T4 (3)</td><td>3</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Makespan = max(7, 7, 3) = <b class="best">7 unit waktu</b>. Ini lebih baik daripada jadwal contoh sebelumnya yang memiliki makespan 9.</p>
+    <p class="small muted">Angka ini merupakan demonstrasi hitung manual. Gunakan demo interaktif di atas untuk mencoba susunan dan membandingkan pencarian.</p>
+  </div>
+
+  <div class="callout" style="margin-top:16px">
+    <b>Alur lengkap:</b> masalah scheduling → representasi kandidat → fungsi objektif (makespan) → HS/CSA menghasilkan kandidat → evaluasi & seleksi → jadwal terbaik yang ditemukan.
+  </div>
+</section>
+
+<section id="banding">
+  <div class="section-head">
+    <div>
+      <div class="kicker">06 · Ringkasan</div>
+      <h2>Dua cara mencari, satu tujuan</h2>
+    </div>
+    <p>Kedua algoritma sama-sama berbasis populasi/kumpulan kandidat, tetapi mekanisme eksplorasinya berbeda.</p>
+  </div>
+  <div class="card tablewrap">
+    <table>
+      <thead>
+        <tr><th>Aspek</th><th>Harmony Search (HS)</th><th>Clonal Selection (CSA)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Inspirasi</td><td>Improvisasi musisi mencari harmoni</td><td>Seleksi klonal pada sistem imun adaptif</td></tr>
+        <tr><td>Unit solusi</td><td>Harmony / kandidat di Harmony Memory</td><td>Antibodi / kandidat dalam populasi</td></tr>
+        <tr><td>Cara membuat kandidat</td><td>Memori solusi, pilihan acak, pitch adjustment</td><td>Kloning kandidat terpilih dan hypermutation</td></tr>
+        <tr><td>Eksplorasi</td><td>Pilihan acak (1 − HMCR)</td><td>Mutasi besar + receptor editing</td></tr>
+        <tr><td>Eksploitasi</td><td>HMCR & pitch adjustment</td><td>Mutasi kecil pada antibodi terbaik</td></tr>
+        <tr><td>Seleksi</td><td>Kandidat baru mengganti anggota HM terburuk jika lebih baik</td><td>Seleksi terbaik dari induk + klon; dapat menjaga keragaman dengan kandidat baru</td></tr>
+        <tr><td>Parameter yang umum</td><td>HMS, HMCR, PAR, bandwidth, iterasi</td><td>Ukuran populasi, jumlah klon, laju mutasi, seleksi, iterasi</td></tr>
+        <tr><td>Kekuatan intuitif</td><td>Struktur dasar relatif ringkas dan mudah dijelaskan</td><td>Memfokuskan pencarian pada kandidat unggul melalui kloning dan mutasi</td></tr>
+        <tr><td>Hal yang perlu diperhatikan</td><td>Parameter dan representasi diskrit harus dirancang sesuai masalah</td><td>Mutasi berlebihan bisa merusak kandidat; mutasi terlalu kecil bisa mengurangi eksplorasi</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="grid two" style="margin-top:16px">
+    <div class="card">
+      <h3>🎼 Kapan HS menarik dicoba?</h3>
+      <p>Saat ingin memakai mekanisme pencarian yang sederhana: menyimpan kandidat, mengombinasikan keputusan dari memori, lalu melakukan penyesuaian kecil.</p>
+    </div>
+    <div class="card">
+      <h3>🧬 Kapan CSA menarik dicoba?</h3>
+      <p>Saat ingin memusatkan pencarian di sekitar kandidat berkualitas sambil menciptakan variasi melalui kloning dan mutasi.</p>
+    </div>
+  </div>
+  <div class="callout" style="margin-top:16px">
+    <b>Intinya:</b> HS membuat kandidat baru dengan <i>menggabungkan</i> potongan solusi lama, sedangkan CSA <i>memperbanyak lalu memodifikasi</i> solusi bagus. Performa atau keunggulan masing-masing algoritma sangat bergantung pada karakteristik kasus dan pengaturan parameter yang digunakan.
+  </div>
+</section>
+
+<section id="referensi">
+  <div class="section-head">
+    <div>
+      <div class="kicker">07 · Bacaan ilmiah</div>
+      <h2>Referensi & sumber</h2>
+    </div>
+    <p>Paper berikut menjadi titik awal untuk memahami konsep dan aplikasi. Buka tautan untuk membaca detail, metode, dan konteks eksperimennya.</p>
+  </div>
+  <div class="card refs">
+    <h3>1. Harmony Search — workflow scheduling</h3>
+    <p>Melnik, M. &amp; Trofimenko, T. (2015). <i>Polyrhythmic Harmony Search for Workflow Scheduling.</i> Procedia Computer Science, 66, 468–476. DOI: 10.1016/j.procs.2015.11.053.</p>
+    <a href="https://www.sciencedirect.com/science/article/pii/S187705091503402X" target="_blank" rel="noopener">Buka paper di ScienceDirect ↗</a>
+    <p class="small muted">Paper ini membahas varian Polyrhythmic Harmony Search untuk workflow scheduling, termasuk penjadwalan task pada lingkungan komputasi.</p>
+    <hr style="border:0;border-top:1px solid var(--line);margin:24px 0">
+    <h3>2. Clonal Selection Algorithm (CSA)</h3>
+    <p>R. K. Jena (2017). Referensi CSA yang diberikan pada instruksi tugas.</p>
+    <a href="https://www.sciencedirect.com/science/article/pii/S1876610217355054" target="_blank" rel="noopener">Buka paper di ScienceDirect ↗</a>
+    <p class="small muted">Gunakan halaman paper untuk memverifikasi judul, nama penulis lengkap, detail publikasi, serta varian CSA yang digunakan sebelum menuliskannya pada daftar pustaka final.</p>
+    <hr style="border:0;border-top:1px solid var(--line);margin:24px 0">
+    <h3>Bacaan tambahan untuk konsep dasar HS</h3>
+    <p>Gao, X. Z. et al. (2015). <i>Harmony Search Method: Theory and Applications.</i> Computational Intelligence and Neuroscience.</p>
+    <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4405318/" target="_blank" rel="noopener">Baca artikel open access di PubMed Central ↗</a>
+    <p class="small muted">Menjelaskan prinsip Harmony Memory, improvisasi kandidat, pembaruan memori, dan aplikasi HS. <a href="https://pubmed.ncbi.nlm.nih.gov/25945083/" target="_blank" rel="noopener">Metadata PubMed ↗</a></p>
+  </div>
+</section>
+</main>
+<footer class="footer"><div class="wrap">Kelompok 5 · Metaheuristik Interaktif — Harmony Search & Clonal Selection</div></footer>
+
+<script src="script.js"></script>
+</body>
+</html>
