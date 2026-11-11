@@ -3,29 +3,29 @@ const $=id=>document.getElementById(id);
 function buildSteps(id, color, list){
   const el=$(id);
   el.style.setProperty('--c', color);
+  let k=0,hold=0;
+  const focus=(i,h)=>{[...el.children].forEach(x=>x.classList.remove('on'));el.children[i].classList.add('on');k=i;if(h)hold=Date.now()+h};
   list.forEach((s,i)=>{
     const d=document.createElement('div');
     d.className='step'+(i?'':' on');
     d.innerHTML=`<div class="n">${String(i+1).padStart(2,'0')}</div><div><strong>${s[0]}</strong><p>${s[1]}</p></div>`;
-    d.onclick=()=>{[...el.children].forEach(x=>x.classList.remove('on'));d.classList.add('on')};
+    d.onclick=()=>focus(i,15000);
     el.appendChild(d);
   });
-  let k=0;
   setInterval(()=>{
-    if(!document.body.contains(el)||!el.offsetParent)return;
-    [...el.children].forEach(x=>x.classList.remove('on'));
-    k=(k+1)%list.length;
-    el.children[k].classList.add('on');
+    if(Date.now()<hold||!el.offsetParent)return;
+    focus((k+1)%list.length);
   },3800);
+  return focus;
 }
-buildSteps('hsSteps','#ff922b',[
+const hsFocus=buildSteps('hsSteps','#ff922b',[
   ['Atur parameter','Tentukan nilai HMS, HMCR, PAR, dan jumlah iterasi maksimal. Seperti menyiapkan aturan band sebelum jam session.'],
   ['Isi Harmony Memory','Buat sejumlah jadwal secara acak sebanyak kapasitas HMS, lalu hitung nilai makespan masing-masing dan simpan ke dalam memori. Ini berfungsi sebagai "buku catatan" untuk kombinasi nada awal.'],
   ['Improvisasi harmoni baru','Untuk setiap tugas (task): pilih mesin virtual (VM) dari harmoni yang ada di memori berdasarkan peluang HMCR. Selanjutnya, lakukan penyesuaian (geser ke VM tetangga) berdasarkan peluang PAR. Jika tidak terpilih, tentukan VM secara acak.'],
   ['Perbarui memori','Hitung nilai makespan dari harmoni baru yang dihasilkan. Jika hasilnya lebih bagus daripada harmoni paling buruk yang tersimpan di memori, ganti harmoni terburuk tersebut dengan yang baru.'],
   ['Ulangi sampai selesai','Ulangi proses improvisasi dan pembaruan memori hingga batas maksimal iterasi terpenuhi. Harmoni terbaik yang tersisa di dalam memori akan menjadi hasil jadwal akhir.']
 ]);
-buildSteps('csSteps','#4dabf7',[
+const csFocus=buildSteps('csSteps','#4dabf7',[
   ['Buat populasi antibodi','Hasilkan sejumlah jadwal awal secara acak. Setiap jadwal = satu antibodi.'],
   ['Hitung affinity','Affinity = seberapa cocok antibodi dengan “kuman”. Di scheduling: affinity tinggi = makespan rendah.'],
   ['Seleksi terbaik','Ambil n antibodi dengan affinity tertinggi untuk diperbanyak.'],
@@ -35,70 +35,131 @@ buildSteps('csSteps','#4dabf7',[
   ['Ulangi','Mengulangi seluruh proses di atas sampai iterasi habis; antibodi terbaik = jadwal akhir.']
 ]);
 
-let mem=[[0,1,2,1,0,2,1,0],[2,2,1,0,1,0,0,1],[1,0,0,2,2,1,2,2],[0,2,1,1,0,0,1,2]];
+const rnd=n=>Math.floor(Math.random()*n);
 $('hmcr').oninput=e=>$('hv1').textContent=e.target.value;
 $('par').oninput=e=>$('hv2').textContent=e.target.value;
-function improv(){
-  const H=+$('hmcr').value,P=+$('par').value,c=$('hsChips');
-  c.innerHTML='';
-  let n=[0,0,0];
-  for(let i=0;i<8;i++){
-    let v,t;
-    if(Math.random()<H){
-      v=mem[Math.floor(Math.random()*mem.length)][i];t='M';
-      if(Math.random()<P){v=(v+(Math.random()<.5?1:2))%3;t='A'}
-    }else{v=Math.floor(Math.random()*3);t='R'}
-    n['MAR'.indexOf(t)]++;
-    const d=document.createElement('div');
-    d.className='mini-chip '+t;
-    d.style.animationDelay=i*90+'ms';
-    d.innerHTML=`${v}<small>T${i+1}·${t}</small>`;
-    c.appendChild(d);
+
+/* ===== HS: improvisasi bertahap ===== */
+const memInit=[[0,1,2,1,0,2,1,0],[2,2,1,0,1,0,0,1],[1,0,0,2,2,1,2,2],[0,2,1,1,0,0,1,2]];
+let mem=[],hsS=null,hsT=null;
+const mkH=a=>{const L=[0,0,0];a.forEach((v,i)=>L[v]+=taskTimes[i][v]);return Math.max(...L)};
+function hsSay(t){$('hsNarr').innerHTML=t}
+function hsMemRender(h){
+  h=h||{};
+  $('hsMem').innerHTML='<table><thead><tr><th>Memori</th>'+Array.from({length:8},(_,i)=>`<th class="${h.col===i?'colhl':''}">T${i+1}</th>`).join('')+'<th>Makespan</th></tr></thead><tbody>'+
+    mem.map((r,k)=>`<tr class="${h.row===k?'rowhl':''}"><td>H${k+1}</td>${r.map((v,i)=>`<td class="${h.col===i?'colhl':''}${h.row===k&&h.col===i?' cellhl':''}">${v}</td>`).join('')}<td>${mkH(r)}</td></tr>`).join('')+'</tbody></table>';
+}
+function hsReset(){
+  clearInterval(hsT);hsT=null;$('hsBtn').textContent='▶ Putar otomatis';
+  mem=memInit.map(r=>r.slice());
+  hsS={i:0,ph:0,out:[],v:0,k:0,t:'M',r:0,done:false};
+  $('hsChips').innerHTML='';hsMemRender();
+  hsSay('Tekan <b>Langkah berikutnya</b> atau <b>Putar otomatis</b>. Harmoni baru akan dibangun dari nada 1 sampai 8, lalu dibandingkan dengan memori.');
+}
+function hsPut(){
+  const s=hsS,d=document.createElement('div');
+  d.className='mini-chip '+s.t;d.innerHTML=`${s.v}<small>T${s.i+1}·${s.t}</small>`;
+  $('hsChips').appendChild(d);s.out.push(s.v);s.i++;s.ph=0;
+}
+function hsNext(){
+  const s=hsS,H=+$('hmcr').value,P=+$('par').value;
+  if(s.done){hsReset();return true}
+  if(s.i>=8){
+    hsFocus(3,9000);
+    const f=mkH(s.out);let w=0;mem.forEach((r,k)=>{if(mkH(r)>mkH(mem[w]))w=k});
+    const fw=mkH(mem[w]);
+    if(f<fw){mem[w]=s.out.slice();hsMemRender({row:w});
+      hsSay(`<b>Langkah akhir · Evaluasi & perbarui memori.</b> Makespan harmoni baru = <b>${f}</b>, harmoni terburuk di memori (H${w+1}) = ${fw}. Lebih kecil = lebih bagus, jadi H${w+1} <b>diganti</b> harmoni baru.`);
+    }else{hsMemRender();
+      hsSay(`<b>Langkah akhir · Evaluasi & perbarui memori.</b> Makespan harmoni baru = <b>${f}</b>, harmoni terburuk di memori = ${fw}. Tidak lebih bagus, jadi harmoni baru <b>dibuang</b> dan memori tetap. Klik “Langkah berikutnya” untuk mencoba lagi.`);
+    }
+    s.done=true;return false;
   }
-  $('hsLog').textContent=`Memori: ${n[0]} nada · digeser: ${n[1]} · acak: ${n[2]}. Coba HMCR rendah → hasil makin acak (eksplorasi). HMCR tinggi → makin mirip memori (eksploitasi).`;
+  hsFocus(2,9000);
+  const i=s.i;
+  if(s.ph===0){
+    s.r=Math.random();s.t=s.r<H?'M':'R';hsMemRender({col:i});
+    hsSay(`<b>Nada ${i+1}/8 (task T${i+1}) · Pertanyaan 1:</b> lempar dadu r = <b>${s.r.toFixed(2)}</b> dibanding HMCR ${H}. `+(s.t==='M'?'r lebih kecil → <b>ambil dari memori</b>.':'r tidak lebih kecil → <b>pilih VM secara acak</b>.'));
+    s.ph=1;
+  }else if(s.ph===1){
+    if(s.t==='M'){
+      s.k=rnd(mem.length);s.v=mem[s.k][i];hsMemRender({col:i,row:s.k});
+      hsSay(`<b>Pertanyaan 2:</b> pilih satu harmoni memori secara acak → <b>H${s.k+1}</b>, nada T${i+1}-nya VM <b>${s.v}</b>.`);s.ph=2;
+    }else{
+      s.v=rnd(3);hsPut();
+      hsSay(`<b>Pertanyaan 2:</b> VM acak yang terpilih = <b>${s.v}</b> (tanpa melihat memori; ini yang disebut eksplorasi). Lanjut ke nada berikutnya.`);
+    }
+  }else{
+    s.r=Math.random();
+    if(s.r<P){const nv=(s.v+(Math.random()<.5?1:2))%3;
+      hsSay(`<b>Pertanyaan 3:</b> r = <b>${s.r.toFixed(2)}</b> dibanding PAR ${P} → lebih kecil, jadi nada <b>digeser</b> dari VM ${s.v} ke VM <b>${nv}</b> (pitch adjustment).`);s.v=nv;s.t='A';
+    }else hsSay(`<b>Pertanyaan 3:</b> r = <b>${s.r.toFixed(2)}</b> dibanding PAR ${P} → tidak lebih kecil, nada <b>dipertahankan</b> VM ${s.v}.`);
+    hsPut();
+  }
+  return true;
+}
+function hsAll(){hsReset();while(hsNext());}
+function hsToggle(){
+  if(hsT){clearInterval(hsT);hsT=null;$('hsBtn').textContent='▶ Putar otomatis';return}
+  if(hsS.done)hsReset();
+  $('hsBtn').textContent='⏸ Jeda';
+  hsT=setInterval(()=>{if(!hsNext()){clearInterval(hsT);hsT=null;$('hsBtn').textContent='▶ Putar otomatis'}},1200);
 }
 
-let ab=[];
+/* ===== CSA: satu generasi bertahap ===== */
+let cs=null,csT=null;
+const CSN=['0 Populasi','1 Hitung affinity','2 Seleksi','3 Kloning','4 Hypermutation','5 Seleksi ulang'];
+function csSay(t){$('csLog').innerHTML=t}
 function csaInit(){
-  ab=Array.from({length:6},()=>20+Math.random()*50);
-  showBars();
-  $('csLog').textContent='Populasi awal dibuat acak.';
+  clearInterval(csT);csT=null;$('csBtn').textContent='▶ Putar otomatis';
+  cs={pop:Array.from({length:6},()=>20+Math.random()*50),ph:0,gen:0,rank:[],cl:[],flags:[]};
+  csRender();
+  csSay('<b>Populasi awal:</b> 6 antibodi (jadwal) dibuat acak. Tinggi batang = affinity. Tekan “Langkah berikutnya”.');
 }
-function showBars(){
-  const b=$('bars');
-  if(b.children.length!==ab.length){
-    b.innerHTML='';
-    ab.forEach(()=>{const d=document.createElement('div');d.className='bar';d.innerHTML='<span></span>';b.appendChild(d)});
+function csRender(){
+  const s=cs;if(!s)return;
+  const bar=(v,cls,lab)=>`<div class="bar ${cls}" style="height:${v*1.15}px"><span>${v.toFixed(0)}</span><em>${lab}</em></div>`;
+  $('csGen').textContent=s.gen;
+  $('csPh').innerHTML=CSN.map((t,i)=>`<span class="${i===s.ph?'on':''}">${t}</span>`).join('<i>→</i>');
+  $('bars').innerHTML=s.pop.map((v,i)=>{
+    const r=s.rank.indexOf(i);let cls='',lab='A'+(i+1);
+    if(s.ph>=1&&s.ph<5)lab='#'+(r+1);
+    if(s.ph>=2&&s.ph<5)cls=r<3?'sel':'dim';
+    if(s.ph===5){const f=s.flags[i];cls=f==='rnd'?'new':f==='imp'?'sel':'';lab=f==='rnd'?'acak baru':f==='imp'?'terbaik':'tetap'}
+    return bar(v,cls,lab);
+  }).join('');
+  $('clones').innerHTML=s.cl.length?s.cl.map(c=>bar(s.ph>=4?c.v:c.v0,'clone',`dari #${c.from+1}`+(s.ph>=4?(c.v>=c.v0?' ▲':' ▼'):''))).join(''):'<span class="small muted" style="align-self:center">(belum ada klon, muncul di langkah 3)</span>';
+}
+function csaNext(){
+  const s=cs;
+  if(s.ph===5){s.ph=1;s.gen++;s.cl=[]}else s.ph++;
+  csFocus(s.ph,9000);
+  if(s.ph===1){
+    s.rank=[...s.pop.keys()].sort((a,b)=>s.pop[b]-s.pop[a]);
+    csSay('<b>Langkah 1 · Hitung affinity.</b> Tiap antibodi dinilai; batang tertinggi = jadwal terbaik (makespan terendah). Label <b>#1…#6</b> adalah peringkatnya.');
+  }else if(s.ph===2){
+    csSay('<b>Langkah 2 · Seleksi.</b> Tiga antibodi teratas (hijau) dipilih untuk diperbanyak. Sisanya diredupkan untuk sementara.');
+  }else if(s.ph===3){
+    s.cl=[];s.rank.slice(0,3).forEach((idx,r)=>{for(let j=0;j<3-r;j++)s.cl.push({from:r,v0:s.pop[idx],v:s.pop[idx]})});
+    csSay('<b>Langkah 3 · Kloning.</b> #1 digandakan 3×, #2 2×, #3 1× (total 6 klon, ungu). Makin bagus peringkatnya, makin banyak salinannya. Nilai klon masih sama dengan induknya.');
+  }else if(s.ph===4){
+    s.cl.forEach(c=>{const m=(1-c.v0/100)*28+3;c.v=Math.min(100,Math.max(1,c.v0+(Math.random()-.35)*m))});
+    csSay('<b>Langkah 4 · Hypermutation.</b> Tiap klon diubah. Induk yang sudah bagus hanya mutasi kecil (agar tidak rusak), induk yang lemah mutasi lebih besar. ▲ = klon lebih baik dari induk, ▼ = lebih buruk.');
+  }else{
+    const nw=[],fl=[];
+    s.rank.slice(0,3).forEach((idx,r)=>{nw.push(Math.max(s.pop[idx],...s.cl.filter(c=>c.from===r).map(c=>c.v)));fl.push('imp')});
+    nw.push(s.pop[s.rank[3]],s.pop[s.rank[4]]);fl.push('stay','stay');
+    nw.push(15+Math.random()*50);fl.push('rnd');
+    s.pop=nw;s.flags=fl;s.cl=[];
+    csSay('<b>Langkah 5 · Seleksi ulang + receptor editing.</b> Dari tiap induk dan klonnya diambil yang terbaik (hijau). Peringkat 4 dan 5 tetap. Peringkat 6 diganti antibodi acak (pink) supaya populasi tetap beragam. Tekan lagi untuk generasi berikutnya.');
   }
-  const mx=Math.max(...ab);
-  [...b.children].forEach((d,i)=>{
-    d.style.height=(ab[i]*1.15)+'px';
-    d.firstChild.textContent=ab[i].toFixed(0);
-    d.style.opacity=.45+.55*ab[i]/mx;
-    d.style.background=ab[i]===mx?'var(--ok)':'var(--cs)';
-  });
+  csRender();
 }
-function csaGen(){
-  const o=[...ab].sort((a,b)=>b-a);
-  let nw=[],clones=0;
-  o.slice(0,3).forEach((a,r)=>{
-    let best=a;
-    const k=3-r;
-    for(let j=0;j<k;j++){
-      clones++;
-      const m=(1-a/100)*28+3;
-      const c=Math.min(100,Math.max(1,a+(Math.random()-.35)*m));
-      if(c>best)best=c;
-    }
-    nw.push(best);
-  });
-  nw.push(...o.slice(3,5));
-  nw.push(15+Math.random()*50);
-  ab=nw;
-  showBars();
-  $('csLog').textContent=`${clones} klon dibuat dari 3 antibodi terbaik. Mutasi kecil untuk yang kuat, besar untuk yang lemah. Antibodi terlemah diganti satu antibodi acak (receptor editing). Batang hijau = terbaik.`;
+function csToggle(){
+  if(csT){clearInterval(csT);csT=null;$('csBtn').textContent='▶ Putar otomatis';return}
+  $('csBtn').textContent='⏸ Jeda';
+  csT=setInterval(csaNext,2300);
 }
-csaInit();
 
 const taskTimes=[[4,6,5],[7,3,4],[5,4,6],[6,5,3],[3,7,4],[5,4,7],[4,6,3],[6,3,5]];
 let mode='hs', bestAssign=[], bestScore=Infinity, iteration=0, evaluations=0, timer=null, running=false, population=[];
@@ -122,18 +183,19 @@ function mutate(a,rate){
 }
 function makeCandidate(){
   if(mode==='hs'){
-    let a=[];
+    let a=[],src=[];
     for(let i=0;i<numTasks();i++){
       if(population.length && Math.random()<.82){
         let base=population[Math.floor(Math.random()*Math.min(5,population.length))].a[i];
-        a[i]=Math.random()<.28?(base+1+Math.floor(Math.random()*(numVM()-1)))%numVM():base;
-      }else a[i]=Math.floor(Math.random()*numVM());
+        if(Math.random()<.28){a[i]=(base+1+Math.floor(Math.random()*(numVM()-1)))%numVM();src[i]='A'}
+        else{a[i]=base;src[i]='M'}
+      }else{a[i]=Math.floor(Math.random()*numVM());src[i]='R'}
     }
-    return a;
+    return {a,src};
   }
-  let parent=population[Math.floor(Math.random()*Math.min(4,population.length))]?.a || randomAssign();
-  let rate=.12+Math.random()*.55;
-  return mutate(parent,rate);
+  const parent=population[Math.floor(Math.random()*Math.min(4,population.length))]?.a || randomAssign();
+  const a=mutate(parent,.12+Math.random()*.55);
+  return {a,src:a.map((v,i)=>v===parent[i]?'W':'X')};
 }
 function fmt(a){return a.map((v,i)=>`T${i+1}→VM${v+1}`).join(', ')}
 function log(msg){$('log').innerHTML+=`<div>› ${msg}</div>`;$('log').scrollTop=$('log').scrollHeight}
@@ -158,7 +220,25 @@ function reset(){
   population.sort((a,b)=>a.s-b.s);
   bestAssign=population[0].a.slice();bestScore=population[0].s;
   $('log').innerHTML='Eksperimen direset. Kandidat awal dibangkitkan dan dinilai.';
+  $('labCand').innerHTML='';labPh(false);
+  $('labNarr').innerHTML='Setiap iterasi punya 4 tahap: <b>bangkitkan</b> kandidat → <b>hitung</b> makespan → <b>bandingkan</b> → <b>perbarui</b>. Tekan “Langkah berikutnya” untuk melihat satu iterasi saja.';
   render();
+}
+const TAG={M:'memori',A:'geser',R:'acak',W:'induk',X:'mutasi'};
+function labPh(lit,acc){
+  const hs=mode==='hs';
+  $('labPhases').innerHTML=['1 Bangkitkan kandidat','2 Hitung makespan','3 Bandingkan',hs?'4 Perbarui memori':'4 Perbarui populasi']
+    .map((t,i)=>`<span class="${lit?'lit':''}${lit&&i===3&&!acc?' no':''}" style="animation-delay:${i*160}ms">${t}</span>`).join('<i>→</i>');
+}
+function labInfo(c,s,w,acc,rec){
+  const hs=mode==='hs',cnt=k=>c.src.filter(x=>x===k).length;
+  labPh(true,acc);
+  $('labCand').innerHTML=c.src.map((t,i)=>`<div class="mini-chip ${t}" style="animation-delay:${i*70}ms">${c.a[i]+1}<small>T${i+1}·${TAG[t]}</small></div>`).join('');
+  $('labNarr').innerHTML=
+    `<b>1 Bangkitkan:</b> `+(hs?`${cnt('M')} nada dari memori, ${cnt('A')} digeser, ${cnt('R')} acak.`:`satu induk dipilih, lalu ${cnt('X')} dari ${c.src.length} task dimutasi.`)+
+    ` <b>2 Hitung:</b> makespan kandidat = <b>${s}</b>. <b>3 Bandingkan:</b> ${hs?'yang terburuk di memori':'yang terburuk di populasi'} = ${w}. <b>4 Perbarui:</b> `+
+    (acc?(hs?'kandidat lebih bagus → menggantikan yang terburuk.':'kandidat cukup bagus → masuk populasi.'):(hs?'tidak lebih bagus → dibuang.':'kalah dari populasi → dibuang.'))+
+    (rec?' 🏆 <b>Rekor baru!</b>':'');
 }
 function step(){
   if(iteration>=+$('iters').value){
@@ -166,20 +246,24 @@ function step(){
     log(`Selesai. Jadwal terbaik yang ditemukan memiliki makespan ${bestScore} unit.`);
     return false;
   }
-  let a=makeCandidate(),s=score(a);evaluations++;iteration++;
+  const c=makeCandidate(),a=c.a,s=score(a);evaluations++;iteration++;
+  population.sort((x,y)=>x.s-y.s);
+  const worst=population[population.length-1].s,prev=bestScore;let acc;
   if(mode==='hs'){
-    population.sort((x,y)=>x.s-y.s);
-    if(s<population[population.length-1].s)population[population.length-1]={a,s};
+    acc=s<worst;
+    if(acc)population[population.length-1]={a,s};
   }else{
     population.push({a,s});
     population.sort((x,y)=>x.s-y.s);
     population=population.slice(0,12);
+    acc=population.some(p=>p.a===a);
     if(iteration%7===0){
-      population[population.length-1]={a:randomAssign(),s:0};
-      population[population.length-1].s=score(population[population.length-1].a);
+      const r=randomAssign();
+      population[population.length-1]={a:r,s:score(r)};
     }
   }
   population.sort((x,y)=>x.s-y.s);
+  labInfo(c,s,worst,acc,population[0].s<prev);
   if(population[0].s<bestScore){
     bestScore=population[0].s;
     bestAssign=population[0].a.slice();
@@ -212,7 +296,7 @@ $('reset').addEventListener('click',reset);
 $('iters').addEventListener('input',()=>{$('itersVal').textContent=$('iters').value;render()});
 $('tasks').addEventListener('input',()=>{$('tasksVal').textContent=$('tasks').value;reset()});
 $('vms').addEventListener('change',reset);
-reset();
+reset();hsReset();csaInit();
 
 let seed=7,tasks=[],mips=[1000,1500,2500];
 function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
@@ -327,7 +411,7 @@ tb.addEventListener('click',()=>{
   const t=root.dataset.theme==='dark'?'light':'dark';
   root.dataset.theme=t;
   try{localStorage.setItem('theme',t)}catch(e){}
-  syncBtn();draw();showBars();
+  syncBtn();draw();csRender();
 });
 syncBtn();
 

@@ -119,12 +119,9 @@
   </div>
 
   <div class="card" style="margin-top:16px">
-    <h3>Coba improvisasi sendiri</h3>
-    <p class="muted small">Satu harmoni = 8 task. Tiap “nada” ditentukan oleh tiga kemungkinan:
-      <span class="pill M">M</span> (Memory): Ambil dari memori
-      <span class="pill A">A</span> (Adjust): Pergeseran nilai nada
-      <span class="pill R">R</span> (Random): Pemilihan acak.
-    </p>
+    <span class="tag">Simulasi bertahap</span>
+    <h3>Improvisasi satu harmoni, nada demi nada</h3>
+    <p class="muted small">Kita membuat <b>1 harmoni baru = 8 nada</b> (1 nada = VM tujuan untuk 1 task). Tiap nada melewati 3 pertanyaan: <b>(1)</b> ambil dari memori atau acak? (lempar dadu vs HMCR) → <b>(2)</b> memori yang mana? → <b>(3)</b> perlu digeser? (lempar dadu vs PAR). Tonton kolom yang menyala pada tabel memori.</p>
     <div class="ctrl">
       <label>HMCR <b id="hv1">0.9</b>
         <input type="range" id="hmcr" min="0" max="1" step=".05" value=".9" style="width:140px;accent-color:var(--hs)">
@@ -132,10 +129,22 @@
       <label>PAR <b id="hv2">0.3</b>
         <input type="range" id="par" min="0" max="1" step=".05" value=".3" style="width:140px;accent-color:var(--hs)">
       </label>
-      <button class="primary" style="background:linear-gradient(120deg,#e8590c,#c2410c)" onclick="improv()">🎵 Improvisasi!</button>
     </div>
-    <div class="mini-chips" id="hsChips"></div>
-    <div class="log" id="hsLog" style="height:auto;min-height:40px">Klik "Improvisasi!" untuk membuat harmoni baru. Angka yang muncul menunjukkan nomor VM (0, 1, atau 2).</div>
+    <div class="ctrl">
+      <button class="primary" id="hsBtn" style="background:linear-gradient(120deg,#e8590c,#c2410c)" onclick="hsToggle()">▶ Putar otomatis</button>
+      <button onclick="hsNext()">Langkah berikutnya</button>
+      <button onclick="hsAll()">⚡ Langsung jadi</button>
+      <button onclick="hsReset()">Reset</button>
+    </div>
+    <p class="small muted" style="margin:6px 0 4px">Harmony Memory (4 harmoni tersimpan; angka = nomor VM 0, 1, atau 2):</p>
+    <div class="tablewrap hsmem" id="hsMem"></div>
+    <p class="small muted" style="margin:12px 0 0">Harmoni baru yang sedang dibuat:
+      <span class="pill M">M</span> dari memori
+      <span class="pill A">A</span> digeser (PAR)
+      <span class="pill R">R</span> acak
+    </p>
+    <div class="mini-chips" id="hsChips" style="min-height:58px"></div>
+    <div class="narr hsn" id="hsNarr" aria-live="polite"></div>
   </div>
 
   <div class="callout" style="margin-top:16px">
@@ -182,14 +191,20 @@
   </div>
 
   <div class="card" style="margin-top:16px">
-    <h3>Simulasi satu generasi imun</h3>
-    <p class="muted small">Tinggi batang menunjukkan nilai afinitas (semakin tinggi, semakin berkualitas solusi tersebut). Antibodi bagus dikloning dengan mutasi <b>kecil</b>, yang lemah bermutasi <b>besar</b>.</p>
+    <span class="tag">Simulasi bertahap · Generasi <b id="csGen">0</b></span>
+    <h3>Satu generasi sistem imun, 5 langkah</h3>
+    <p class="muted small">Tinggi batang = <b>affinity</b> (semakin tinggi, semakin bagus jadwalnya). Tekan “Langkah berikutnya” dan ikuti kotak penjelasan di bawah: tiap langkah hanya mengubah satu hal agar mudah diikuti.</p>
+    <div class="flow phases" id="csPh" style="--c:var(--cs)"></div>
     <div class="ctrl">
-      <button class="primary" style="background:linear-gradient(120deg,#1c7ed6,#1864ab)" onclick="csaGen()">🧬 Jalankan 1 generasi</button>
+      <button class="primary" id="csBtn" style="background:linear-gradient(120deg,#1c7ed6,#1864ab)" onclick="csToggle()">▶ Putar otomatis</button>
+      <button onclick="csaNext()">Langkah berikutnya</button>
       <button onclick="csaInit()">Reset</button>
     </div>
+    <p class="small muted" style="margin:0 0 6px">Populasi (induk)</p>
     <div class="bars" id="bars"></div>
-    <div class="log" id="csLog" style="height:auto;min-height:40px"></div>
+    <p class="small muted" style="margin:0 0 6px">Klon</p>
+    <div class="bars cl" id="clones"></div>
+    <div class="narr csn" id="csLog" aria-live="polite"></div>
   </div>
 
   <div class="callout" style="margin-top:16px">
@@ -205,6 +220,12 @@
       <h2>Laboratorium scheduling interaktif</h2>
     </div>
     <p>Uji kedua pendekatan pada masalah mini yang sama. Klik jalankan untuk melihat kandidat pembagian task, makespan, dan riwayat pencarian.</p>
+  </div>
+  <div class="flow" style="margin:0 0 16px;justify-content:flex-start">
+    <span><b>①</b> Pilih algoritma (tab)</span><i>→</i>
+    <span><b>②</b> Atur task, VM, iterasi</span><i>→</i>
+    <span><b>③</b> “Langkah berikutnya” = 1 iterasi, “Jalankan” = otomatis</span><i>→</i>
+    <span><b>④</b> Baca 4 tahap iterasi & jadwal terbaik</span>
   </div>
   <div class="card">
     <div class="tabs">
@@ -245,9 +266,14 @@
           <div class="metric"><span>Best makespan</span><b id="metricBest">—</b></div>
           <div class="metric"><span>Evaluasi</span><b id="metricEval">0</b></div>
         </div>
-        <h3>Jadwal kandidat terbaik</h3>
+        <h3>Apa yang terjadi di iterasi ini?</h3>
+        <div class="flow phases" id="labPhases" style="--c:var(--accent);justify-content:flex-start;margin:8px 0"></div>
+        <div class="mini-chips" id="labCand" style="min-height:52px"></div>
+        <div class="narr" id="labNarr" aria-live="polite"></div>
+        <h3 style="margin-top:18px">Jadwal kandidat terbaik</h3>
         <div class="schedule" id="schedule"></div>
         <div class="legend" id="legend"></div>
+        <p class="small muted" style="margin:14px 0 4px">Riwayat pencarian (log)</p>
         <div class="log" id="log" aria-live="polite">Siap. Tekan “Jalankan algoritma” atau “Langkah berikutnya” untuk mulai.</div>
       </div>
     </div>
